@@ -1,0 +1,425 @@
+import java.util.*;
+
+/* GameFrame.java
+ * Authors: Gordon Duan & Parth Kotecha
+ * Date: January 22, 2019
+ * Description: This is the main program that runs the Game
+ */
+
+//Graphics &GUI imports
+import javax.swing.*;
+import java.awt.*;
+
+//Keyboard imports
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
+
+class GameFrame extends JFrame {
+  private static final long serialVersionUID = 7526472295622776147L;  // unique id
+  //class variable (non-static)
+  static double x,y;
+  static GameAreaPanel gamePanel;
+  private World world;
+  JFrame thisFrame;
+  //Constructor - this runs first
+  GameFrame(){
+    super("Gordon and Parth's Game");
+    this.thisFrame = this;
+    // Set the frame to full screen
+    this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+    int maxX = Toolkit.getDefaultToolkit().getScreenSize().width;
+    int maxY = (int)(Math.round(Toolkit.getDefaultToolkit().getScreenSize().height*0.957));
+    this.setSize(maxX,maxY);
+    //this.setUndecorated(true);  //Set to true to remove title bar
+    this.setResizable(true);
+    
+    
+    //Set up the game panel (where we put our graphics)
+    gamePanel = new GameAreaPanel();
+    this.add(new GameAreaPanel());
+    
+    MyKeyListener keyListener = new MyKeyListener();
+    this.addKeyListener(keyListener);
+    
+    this.requestFocusInWindow(); //make sure the frame has focus
+    
+    this.setVisible(true);
+    
+    //Start the game loop in a separate thread
+    Thread t = new Thread(new Runnable() { public void run() { animate(); }}); //start the gameLoop
+    t.start();
+    //End of Constructor
+  }
+  //the main gameloop - this is where the game state is updated
+  public void animate(){
+    while(true){
+      try{ Thread.sleep(10);} catch (Exception exc){}  //delay
+      this.repaint();
+    }
+  }
+  /** --------- INNER CLASSES ------------- **/
+  
+  // Inner class for the the game area - This is where all the drawing of the screen occurs
+  private class GameAreaPanel extends JPanel {
+    public int counter;
+    private static final long serialVersionUID = 7526472295622776147L;  // unique id
+    public GameAreaPanel(){
+      world = new World("Gordon and Parth");
+    }
+    public void paintComponent(Graphics g) {
+      
+      //Redraws the screen
+      super.paintComponent(g); //required
+      setDoubleBuffered(true);
+      if(!world.market.interaction){
+        world.drawWorld(g);
+        this.counter++;
+        if(this.counter%50==0){
+          world.updateWorld();
+          this.counter=0;
+        }
+        if(this.counter/25==0){
+          g.setColor(new Color(0,100,0));
+          g.setFont(new Font("Bodoni MT", Font.PLAIN, 60));
+          g.drawString("+$"+world.player.income,305,100);
+          g.setColor(Color.RED);
+          g.drawString("-$"+world.player.expense,700,100);
+        }
+        //Text
+        g.setColor(Color.BLACK);
+        g.setFont(new Font("Bodoni MT", Font.PLAIN, 40));
+        g.drawString("Months Elapsed: "+world.month,50,50);
+        g.drawString("Age: "+world.player.age,145,300);
+        g.drawString("Money: $"+world.player.money,50,100);
+        //Happiness Bar
+        g.setColor(Color.RED);
+        g.drawRoundRect(110, 120, 300, 60, 40,40);
+        g.fillRoundRect(110, 120, 15*world.player.health, 60, 40, 40);
+        //Happy Face
+        g.drawImage(world.happyFace,420, 120, 60, 60, null);
+        //Sad Face
+        g.drawImage(world.sadFace,10, 118, 130, 65   , null);
+        
+      }else{
+        String interaction = world.market.interactionType;
+        world.backgroundCP = world.backgroundX;
+        while(world.backgroundCP<-1300){
+          world.backgroundCP+=1300;
+        }
+        //Background
+        g.drawImage(world.bImages,world.backgroundCP, 0, 1300, 649, null);
+        g.drawImage(world.bImages,world.backgroundCP+1300, 0, 1300, 649, null);
+        g.drawImage(world.bImages,world.backgroundCP+2600, 0, 1300, 649, null);
+        g.setColor(Color.BLACK);
+        g.setFont(new Font("Bodoni MT", Font.PLAIN, 40));
+        g.drawString("Months Elapsed: "+world.month,50,50);
+        g.drawString("Money: "+world.player.money,50,100);
+        //Happiness Bar
+        g.setColor(Color.RED);
+        g.drawRoundRect(110, 120, 300, 60, 40,40);
+        g.setColor(Color.RED);
+        g.fillRoundRect(110, 120, 15*world.player.health, 60, 40, 40);
+        //Happy Face
+        g.drawImage(world.happyFace,420, 120, 60, 60, null);
+        //Sad Face
+        g.drawImage(world.sadFace,10, 118, 130, 65   , null);
+        //Player
+        g.drawImage(world.player.images[1], 100, 300, 200, 350, null);
+        if((interaction.equals("Transportation"))&&(world.interactionX>215)) {
+          world.interactionX -= 5;
+        }else {
+          world.interactionDone = true;
+        }
+        if ((interaction.equals("Marriage"))&&(world.interactionX>215)){
+          world.interactionX -= 5;
+        }else{
+          world.interactionDone = true;
+        }
+        world.drawInteraction(g,world.interactionX,interaction);
+        if(world.interactionDone) {
+          if (interaction.equals("Transportation")) {
+            g.setFont(new Font("Bodoni MT", Font.PLAIN, 30));
+            g.drawString("You change jobs to work in Downtown Toronto,", 20, 260);
+            g.drawString("How will you get to work?", 20, 290);
+            g.setFont(new Font("Bodoni MT", Font.PLAIN, 40));
+            g.setColor(new Color(4, 172, 60));
+            g.drawRoundRect(800, 50, 400, 150, 40, 40);
+            g.fillRoundRect(800, 50, 400, 150, 40, 40);
+            g.drawRoundRect(800, 250, 400, 150, 40, 40);
+            g.fillRoundRect(800, 250, 400, 150, 40, 40);
+            g.drawRoundRect(800, 450, 400, 150, 40, 40);
+            g.fillRoundRect(800, 450, 400, 150, 40, 40);
+            g.setColor(Color.RED);
+            g.drawString("Buy a Car", 915, 80);
+            g.drawImage(world.highCar, 870, 70, 250, 130, null);
+            g.drawString("Rent a Car", 915, 285);
+            g.drawImage(world.highCar, 870, 275, 250, 130, null);
+            g.drawString("Take Transit", 915, 480);
+            g.drawImage(world.highCar, 860, 470, 250, 130, null);
+            if (world.player.choice.equals("up")) {
+              g.setColor(Color.RED);
+              g.fillRoundRect(800, 50, 400, 150, 40, 40);
+              world.player.choice = "";
+              world.market.buyCar(world.market.cars[1]);
+              world.player.pCar = world.market.cars[1];
+              world.market.interaction = false;
+              world.player.health += 5;
+            } else if (world.player.choice.equals("middle")) {
+              g.setColor(Color.RED);
+              g.fillRoundRect(800, 250, 400, 150, 40, 40);
+              world.player.choice = "";
+              world.market.rentCar(world.market.cars[1]);
+              world.player.pCar = world.market.cars[1];
+              world.market.interaction = false;
+              world.player.health += 3;
+            } else if (world.player.choice.equals("down")) {
+              g.setColor(Color.RED);
+              g.fillRoundRect(800, 450, 400, 150, 40, 40);
+              world.player.choice = "";
+              world.market.takeTransit();
+              world.market.interaction = false;
+              world.player.health += 1;
+            }
+            interaction = "";
+            //world.interactionX = 1450;
+          }
+          if (interaction.equals("Marriage")){
+            g.setColor(Color.YELLOW);
+            g.drawRoundRect(800, 50, 400, 150, 40, 40);
+            g.fillRoundRect(800, 50, 400, 150, 40, 40);
+            g.setColor(Color.BLACK);
+            g.drawString("You got married!", 850, 100);
+            if(world.player.choice.equals("middle")){
+              world.player.choice = "";
+              world.market.interaction = false;
+              world.player.health = 19;
+            }
+          }
+        }
+      }
+    }
+  }
+  public class MyKeyListener implements KeyListener{
+    public void keyTyped(KeyEvent e){
+    }
+    public void keyPressed(KeyEvent e){
+      if(e.getKeyCode() == KeyEvent.VK_UP){
+        world.player.choice = "up";
+      }else if(e.getKeyCode() == KeyEvent.VK_RIGHT){
+        world.player.choice = "middle";
+      }else if(e.getKeyCode() == KeyEvent.VK_DOWN) {
+        world.player.choice = "down";
+      }
+    }
+    public void keyReleased(KeyEvent e) {
+    }
+  }
+  public static void main(String[] args) {
+    new GameFrame();
+  }
+}
+class World {
+  Player player;
+  Market market;
+  Image bImages = Toolkit.getDefaultToolkit().getImage("street0.jpg");
+  Image happyFace = Toolkit.getDefaultToolkit().getImage("happyface.png");
+  Image sadFace = Toolkit.getDefaultToolkit().getImage("sadface.png");
+  Image highCar = Toolkit.getDefaultToolkit().getImage("highCar.png");
+  
+  
+  int counter2 = 0;
+  int month;
+  int backgroundX;
+  int backgroundCP;
+  int interactionX = 1250;
+  boolean interactionDone;
+  
+  World(String playerName) {
+    Car[] cars = new Car[3];
+    cars[0] = new Car("low");
+    cars[1] = new Car("medium");
+    cars[2] = new Car("high");
+    House[] houses = new House[3];
+    houses[0] = new House("low");
+    houses[1] = new House("medium");
+    houses[2] = new House("high");
+    this.month = 0;
+    this.player = new Player(playerName);
+    this.market = new Market(cars, houses, this.player);
+  }
+  
+  public void updateWorld() {
+    this.player.getPayed();
+    this.player.payBills();
+    month++;
+    if (month % 12 == 0) {
+      this.player.age++;
+    }
+    if (month % 6 == 0) {
+      this.player.getRaise();
+    }
+    if (month % 14 == 0) {
+      if (player.health > 8) {
+        this.player.decreaseHealth(1);
+      } else {
+        this.player.decreaseHealth(2);
+      }
+    }
+    if ((this.player.health > 10) && (player.money >= 101000) && (!this.market.carBought)) {
+      this.market.carBought = true;
+      this.market.interaction = true;
+      this.market.interactionType = "Transportation";
+//        }
+//        if ((this.player.health > 11) && (player.money >= 800000) && (!this.market.housingBought)) {
+//            this.market.housingBought = true;
+//            this.market.interaction = true;
+//            this.market.interactionType = "Housing";
+    }
+    if ((!this.player.married) && (this.player.age == 27)) {
+      this.player.married = true;
+      this.market.interaction = true;
+      this.market.interactionType = "Marriage";
+    }
+  }
+  
+  public void drawWorld(Graphics g) {
+    this.counter2++;
+    if (counter2 % 13 == 0) {
+      player.spriteNumber++;
+    }
+    if (player.spriteNumber == 4) {
+      player.spriteNumber = 0;
+    }
+    this.backgroundX -= 1;
+    for (int i = 0; i < 20; i++) {
+      g.drawImage(this.bImages, (this.backgroundX + (1300 * i)), 0, 1300, 649, null);
+    }
+    g.drawImage(this.player.images[this.player.spriteNumber], 100, 300, 200, 350, null);
+  }
+  
+  public void drawInteraction(Graphics g, int x, String interaction) {
+    Image car = Toolkit.getDefaultToolkit().getImage("car.png");
+    if (interaction.equals("Transportation")) {
+      g.drawImage(car, x, 375, 370, 340, null);
+    }
+    Image girl = Toolkit.getDefaultToolkit().getImage("girl.png");
+    if (interaction.equals("Marriage")) {
+      g.drawImage(girl, x, 320, 350, 340, null);
+    }
+  }
+}
+
+class Player {
+  int health;
+  int debt;
+  int money;
+  int income;
+  int expense;
+  int age;
+  boolean married;
+  int spriteNumber;
+  String choice;
+  Image[] images;
+  String name;
+  Car pCar;
+  House pHouse;
+  
+  Player(String name) {
+    this.health = 15;
+    this.money = 0;
+    this.debt = 0;
+    this.married = false;
+    this.age = 22;
+    this.income = ((int) (Math.random() * 20000 + 30000) / 12);
+    this.expense = 50;
+    this.name = name;
+    this.choice = "";
+    this.spriteNumber = 0;
+    this.images = new Image[5];
+    for (int i = 0; i < 5; i++) {
+      this.images[i] = Toolkit.getDefaultToolkit().getImage("stick" + i + ".png");
+    }
+  }
+  
+  public void getPayed() {
+    this.money += this.income;
+  }
+  
+  public void getRaise() {
+    this.income = (int) (this.income * 1.04);
+  }
+  
+  public void decreaseHealth(int amount) {
+    this.health -= amount;
+  }
+  
+  public void payBills() {
+    this.money -= this.expense;
+  }
+}
+
+class Market{
+  Car[]cars;
+  House[]houses;
+  Player player;
+  boolean interaction;
+  boolean carBought;
+  boolean housingBought;
+  String interactionType;
+  Market(Car[]cars,House[]houses,Player player){
+    this.player = player;
+    this.cars = cars;
+    this.houses = houses;
+  }
+  public void buyCar(Car car){
+    this.player.expense += (car.expense);
+    this.player.money -= car.buyNow;
+  }
+  public void rentCar(Car car){
+    car.expense += car.rent;
+    this.player.expense += car.expense;
+  }
+  public void takeTransit() {
+  }
+  public void buyHouse(House house){
+    this.player.expense += house.expense;
+    this.player.money -= 150000;
+  }
+}
+class Car{
+  String type;
+  int expense;
+  int rent;
+  int buyNow;
+  Car(String type){
+    this.type = type;
+    if(this.type.equals("low")){
+      this.buyNow = 5000;
+      this.expense = 300;
+      this.rent = 250;
+    }else if(this.type.equals("medium")){
+      this.buyNow = 40000;
+      this.expense = 500;
+      this.rent = 400;
+    }else{
+      this.buyNow = 10000;
+      this.expense = 800;
+      this.rent = 500;
+    }
+  }
+}
+
+class House{
+  String type;
+  int expense;
+  House(String type){
+    this.type = type;
+    if(this.type.equals("low")){
+      this.expense = 1200;
+    }else if (this.type.equals("medium")){
+      this.expense = 1800;
+    }else{
+      this.expense = 2400;
+    }
+  }
+}
